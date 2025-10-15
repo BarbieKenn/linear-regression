@@ -1,8 +1,9 @@
-
+# caches
 __pycache__/
-*.py[cod]
-*$py.class
-venv/
-.env/
+*/__pycache__/
+
+# datasets
 *.csv
+
+# IDE
 .idea/
