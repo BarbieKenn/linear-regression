@@ -54,18 +54,27 @@ def normalization(dataset: pd.DataFrame) -> pd.DataFrame:
     return dataset_normalized
 
 
-def standardization(dataset: pd.DataFrame) -> pd.DataFrame:
-    num_feats = dataset.select_dtypes(include=['int64', 'float64'])
-    cat_feats = dataset.select_dtypes(exclude=['int64', 'float64'])
+def standardization(dataset: pd.DataFrame, mean: pd.Series = None, std: pd.Series = None):
+    num_feats = dataset.select_dtypes(include=['int64', 'float64']).copy()
+    cat_feats = dataset.select_dtypes(exclude=['int64', 'float64']).copy()
 
-    num_mean = num_feats.mean()
-    n = len(num_feats)
-    num_deviation = (((num_feats - num_mean) ** 2).sum() / (n - 1)) ** 0.5
+    one_hot_cols = [col for col in num_feats.columns
+                    if set(num_feats[col].dropna().unique()).issubset({0, 1})]
 
-    num_standard = (num_feats - num_mean) / num_deviation
+    num_to_scale = num_feats.drop(columns=one_hot_cols, errors='ignore')
+    num_unchanged = num_feats[one_hot_cols]
 
-    dataset_standard = pd.concat([num_standard, cat_feats], axis=1)
-    return dataset_standard
+    if mean is None or std is None:
+        num_mean = num_to_scale.mean()
+        num_std = num_to_scale.std(ddof=0).replace(0, 1)
+        num_standard = (num_to_scale - num_mean) / num_std
+
+        dataset_standard = pd.concat([num_standard, num_unchanged, cat_feats], axis=1)
+        return dataset_standard.fillna(0), num_mean, num_std
+    else:
+        num_standard = (num_to_scale - mean) / std
+        dataset_standard = pd.concat([num_standard, num_unchanged, cat_feats], axis=1)
+        return dataset_standard.fillna(0)
 
 
 if __name__ == "__main__":
